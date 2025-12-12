@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Camera Hack</title>
+    <link rel="stylesheet" href="test.css">
+</head>
+<body>
+    <!-- MATRIX BACKGROUND CANVAS (behind everything) -->
+    <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+
+    <div id="cameraContainer">
+        <video id="cameraFeed" autoplay muted playsinline></video>
+
+        <!-- hidden canvas used for snapshots/recording compositing -->
+        <canvas id="snapshotCanvas" style="display: none;"></canvas>
+
+        <div id="timestampOverlay" aria-live="polite"></div>
+        <div id="countdownDisplay" role="status" aria-hidden="true"></div>
+
+        <div id="controls">
+            <button id="snapshotBtn">Snapshot</button>
+            <button id="recordBtn">Start Recording</button>
+            <button id="stopRecordBtn" style="display: none;">Stop Recording</button>
+            <button id="fullscreenBtn">Fullscreen</button>
+            <button id="zoomInBtn">Zoom In</button>
+            <button id="zoomOutBtn">Zoom Out</button>
+            <button id="settingsBtn">Settings</button>
+        </div>
+
+        <div id="filters">
+            <button class="filterBtn" data-filter="none">None</button>
+            <button class="filterBtn" data-filter="grayscale">Grayscale</button>
+            <button class="filterBtn" data-filter="sepia">Sepia</button>
+            <button class="filterBtn" data-filter="invert">Invert</button>
+        </div>
+
+        <div id="settingsPanel" style="display: none;">
+            <label><input type="checkbox" id="flashToggle"> Flash</label>
+            <label><input type="checkbox" id="audioToggle"> Audio Feedback</label>
+            <select id="resolutionSelect">
+                <option value="640x480">640x480</option>
+                <option value="1280x720" selected>1280x720</option>
+                <option value="1920x1080">1920x1080</option>
+            </select>
+        </div>
+
+        <!-- AI RESULTS (starts hidden; animated in when results arrive) -->
+        <div id="aiResults" aria-live="polite" style="display: none;">
+            <h3>AI Analysis Results</h3>
+
+            <div id="detectedObjects">
+                <h4>Detected Objects:</h4>
+                <ul id="objectsList"></ul>
+            </div>
+
+            <div id="imageLabels">
+                <h4>Image Labels:</h4>
+                <ul id="labelsList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="text.js"></script>
+</body>
+</html>
