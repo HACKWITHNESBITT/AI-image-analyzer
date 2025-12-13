@@ -88,11 +88,14 @@ JavaScript (ES6)	Camera logic, filters, recording, AI integrations
 WebRTC	Webcam access
 Canvas API	Image processing
 (Optional) Vertex AI Vision	Object detection + labeling
+
+
+
 🚀 Live Demo
 
-(Add your deployed link here)
-Example:
-https://yourusername.github.io/camera-vision-web-app/
+https://hackwithnesbitt.github.io/AI-image-analyzer/
+
+
 
 🛠️ Built to Be Extended
 
