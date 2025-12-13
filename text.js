@@ -10,16 +10,18 @@
 
     let W = canvas.width = window.innerWidth;
     let H = canvas.height = window.innerHeight;
-    const fontSize = 14;
+    const fontSize = 14;                // size of each "drop" glyph
     let columns = Math.floor(W / fontSize);
-    const letters = '01⚑✦✧';
+    // characters used (binary + subtle symbols for ambience)
+    const letters = '01⚑✦✧'; // short set; adjust as desired
     let drops = new Array(columns).fill(1);
 
     function draw() {
+        // translucent black to create trail effect
         ctx.fillStyle = 'rgba(0,0,0,0.06)';
         ctx.fillRect(0, 0, W, H);
 
-        ctx.fillStyle = '#00ff66';
+        ctx.fillStyle = '#00ff66'; // neon green
         ctx.font = fontSize + 'px monospace';
 
         for (let i = 0; i < drops.length; i++) {
@@ -44,13 +46,15 @@
 
     window.addEventListener('resize', resize, { passive: true });
 
+    // Expose a simple API to pause/resume if needed later
     window._matrixControl = {
         pause: () => clearInterval(matrixInterval),
         resume: () => { matrixInterval = setInterval(draw, 45); }
     };
 })();
 
-/* ------------------ CAMERA + APP LOGIC ------------------ */
+/* ------------------ CAMERA + APP LOGIC (adapted from your provided code) ------------------ */
+
 const cameraFeed = document.getElementById('cameraFeed');
 const snapshotCanvas = document.getElementById('snapshotCanvas');
 const timestampOverlay = document.getElementById('timestampOverlay');
@@ -84,6 +88,7 @@ let useHardwareTorch = false;
 let isCountingDown = false;
 let countdownInterval = null;
 
+// canvas used for compositing
 const ctx = snapshotCanvas.getContext ? snapshotCanvas.getContext('2d') : null;
 const RECORD_FPS = 30;
 
@@ -134,10 +139,15 @@ function drawFrameToCanvas(){
         snapshotCanvas.width = vw;
         snapshotCanvas.height = vh;
     }
+    // apply filter and draw
     try {
         ctx.filter = buildFilterString();
         ctx.drawImage(cameraFeed, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
-    } catch(e){}
+    } catch(e){
+        // drawing can fail briefly; ignore
+    }
+
+    // draw timestamp into canvas (bottom-left)
     ctx.filter = 'none';
     const fontSize = Math.max(14, Math.floor(snapshotCanvas.width * 0.03));
     ctx.font = `${fontSize}px sans-serif`;
@@ -146,12 +156,13 @@ function drawFrameToCanvas(){
     ctx.fillStyle = '#fff';
     ctx.textBaseline = 'middle';
     ctx.fillText(new Date().toLocaleTimeString(), 18, snapshotCanvas.height - (fontSize/2 + 6));
+
     drawRaf = requestAnimationFrame(drawFrameToCanvas);
 }
 
 /* ---------- snapshot (downloads image) ---------- */
 async function takeSnapshot(){
-    drawFrameToCanvas();
+    drawFrameToCanvas(); // ensure latest frame
     if (flashToggle.checked) await simulateFlashOverlay(120);
     snapshotCanvas.toBlob((blob) => {
         if (!blob) return;
@@ -164,7 +175,8 @@ async function takeSnapshot(){
         a.remove();
         URL.revokeObjectURL(url);
         playSound(660, 240);
-        analyzeImage();
+        // fire AI analysis in background
+        analyzeImage(); // no await
     }, 'image/jpeg', 0.92);
 }
 
@@ -186,11 +198,11 @@ function simulateFlashOverlay(duration = 120){
     });
 }
 
-/* ---------- AI analysis (POST to Render backend) ---------- */
+/* ---------- AI analysis (example: POST to /analyze-image) ---------- */
 async function analyzeImage(){
     try {
         const dataUrl = snapshotCanvas.toDataURL('image/jpeg', 0.9);
-        const response = await fetch('https://ai-image-analyzer-xz5a.onrender.com/analyze-image', {
+        const response = await fetch('http://localhost:3000/analyze-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ image: dataUrl })
@@ -200,6 +212,7 @@ async function analyzeImage(){
         displayResults(result);
     } catch (err) {
         console.warn('AI analysis failed (skipping):', err);
+        // fallback: show placeholder if desired
         displayResults({
             objects: [{ name: 'placeholder object', confidence: 0.86 }],
             labels: [{ description: 'example label', confidence: 0.73 }]
@@ -207,45 +220,55 @@ async function analyzeImage(){
     }
 }
 
-/* ---------- Display AI results with animated reveal ---------- */
+/* ---------- Display AI results with animated reveal (staggered) ---------- */
 function displayResults(result){
+    // clear lists
     objectsList.innerHTML = '';
     labelsList.innerHTML = '';
 
+    // populate objects
     if (result.objects && Array.isArray(result.objects)){
         result.objects.forEach((obj, idx) => {
             const li = document.createElement('li');
             li.className = 'ai-item';
             li.textContent = `${obj.name} (Confidence: ${(obj.confidence * 100).toFixed(1)}%)`;
+            // set staggered animation delay
             li.style.animationDelay = `${idx * 0.12}s`;
             objectsList.appendChild(li);
         });
     }
 
+    // populate labels
     if (result.labels && Array.isArray(result.labels)){
         result.labels.forEach((label, idx) => {
             const li = document.createElement('li');
             li.className = 'ai-item';
             li.textContent = `${label.description} (Confidence: ${(label.confidence * 100).toFixed(1)}%)`;
+            // offset label delays a bit after objects
             li.style.animationDelay = `${( (result.objects?.length || 0) * 0.12) + idx * 0.12}s`;
             labelsList.appendChild(li);
         });
     }
 
+    // reveal container: make display block then add class (so transition runs)
     aiResults.style.display = 'block';
+    // small timeout to ensure CSS transition sees the state change
     requestAnimationFrame(() => {
         aiResults.classList.add('show');
     });
+
+    // auto-scroll into view on small screens
     setTimeout(() => {
         aiResults.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, 400);
 }
 
-/* ---------- Recording ---------- */
+/* ---------- Recording (canvas-based) ---------- */
 let mediaRecorder = null;
 let recordedChunks = [];
 async function startRecording(){
     if (mediaRecorder && mediaRecorder.state === 'recording') return;
+    // optional audio
     let audioStream = null;
     if (audioToggle.checked) {
         try {
@@ -286,7 +309,7 @@ function stopRecording(){
     stopRecordBtn.style.display = 'none';
 }
 
-/* ---------- Countdown ---------- */
+/* ---------- Countdown helper ---------- */
 function disableControlsDuringCountdown(disable){
     snapshotBtn.disabled = disable;
     recordBtn.disabled = disable;
@@ -455,4 +478,5 @@ window.addEventListener('beforeunload', () => {
     if (stream) stream.getTracks().forEach(t => t.stop());
     if (audioTrack) audioTrack.stop();
     if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
-    if (drawRaf) cancelAnimationFrame(draw
+    if (drawRaf) cancelAnimationFrame(drawRaf);
+});
