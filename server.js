@@ -2,24 +2,18 @@ const express = require('express');
 const vision = require('@google-cloud/vision');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
+const port = 3000;
 
-// Use the port from Render or default to 3000
-const port = process.env.PORT || 3000;
+// 👉 FULL path to your JSON file
+const keyFilePath = path.join(
+    process.env.HOME,
+    'Downloads',
+    'camera-ai-project-f99b8f046008.json'
+);
 
-// 👉 Load credentials JSON safely from project folder
-// Example: put your JSON in project root as "camera-ai-credentials.json"
-const keyFilePath = path.join(__dirname, 'camera-ai-credentials.json');
-
-// Ensure file exists
-if (!fs.existsSync(keyFilePath)) {
-    console.error('❌ Google Cloud key file not found at', keyFilePath);
-    process.exit(1);
-}
-
-// Create Vision client
+// 👉 Create a Vision client with credentials
 const client = new vision.ImageAnnotatorClient({
     keyFilename: keyFilePath
 });
@@ -27,11 +21,6 @@ const client = new vision.ImageAnnotatorClient({
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-
-// Root route for sanity check
-app.get('/', (req, res) => {
-    res.send('✅ AI Image Analyzer Backend is running! Use POST /analyze-image to analyze images.');
-});
 
 // Endpoint to analyze image
 app.post('/analyze-image', async (req, res) => {
@@ -43,7 +32,9 @@ app.post('/analyze-image', async (req, res) => {
         }
 
         const request = {
-            image: { content: image.split(',')[1] },
+            image: {
+                content: image.split(',')[1]
+            },
             features: [
                 { type: 'OBJECT_LOCALIZATION' },
                 { type: 'LABEL_DETECTION' }
@@ -75,7 +66,6 @@ app.post('/analyze-image', async (req, res) => {
     }
 });
 
-// Start server
 app.listen(port, () => {
     console.log(`✅ Server running → http://localhost:${port}`);
     console.log(`🔐 Using credentials: ${keyFilePath}`);
